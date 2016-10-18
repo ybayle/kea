@@ -95,3 +95,10 @@ def abs_path_file(filename):
         return os.path.abspath(filename)
     else:
         print_error("Invalid file name: " + filename)
+
+def create_dir(dirName):
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+        return True
+    else:
+        return False

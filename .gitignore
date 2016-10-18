@@ -1,2 +1,5 @@
 arff/
 clean.sh
+__pycache__/
+analysis/
+tmp_arff.txt
