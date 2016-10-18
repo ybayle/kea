@@ -167,7 +167,9 @@ def add_groundtruth(feature_fn, groundtruth_fn, output_fn):
                     output.write(",".join(cur_line[:-1]) + "," + new_tag +"\n")
                     tags.append(new_tag)
                 else:
-                    utils.print_warning("Error with " + old_tag)
+                    # TODO
+                    # utils.print_warning("Error with " + old_tag)
+                    pass
             elif line_num == 2:
                 output.write("@relation train_test.arff\n")
                 # output.write("@relation MARSYAS_KEA\n")
@@ -245,20 +247,16 @@ def create_folds(filelist, nb_folds, invert_train_test=False):
         # Fill folds with data
         with open(filelist, "r") as filelist_pointer:
             arff_header = ""
-            buffer_line = 1
             tmp = ""
             for i, line in enumerate(filelist_pointer):
+                sys.stdout.write("\r\t" + str(i))
+                sys.stdout.flush()
                 # Until the 75th line
-                if i > 73:
+                if i > 74:
                     # Process ARFF data
-                    if buffer_line == 1:
-                        # Memorize line 1
-                        tmp = line
-                        buffer_line += 1
-                    elif buffer_line == 2:
-                        # Memorize line 2
-                        tmp = tmp + line
-                        buffer_line += 1
+                    if "% " in line:
+                        # Memorize line
+                        tmp += line
                     else:
                         # Get line 3 and add it to corresponding fold
                         tag = line.split(",")[-1][:-1]
@@ -267,10 +265,12 @@ def create_folds(filelist, nb_folds, invert_train_test=False):
                             tags_folds_index[tag] += 1
                         tags_folds[tag][tags_folds_index[tag]] -= 1
                         folds[tags_folds_index[tag]] += tmp + line
-                        buffer_line = 1
+                        tmp = ""
                 else:
                     # Save ARFF header lines
                     arff_header += line
+            sys.stdout.write('\n')
+            sys.stdout.flush()
         # At this point data has been split up in different part
         # Use this part to create train/test split
         if invert_train_test:
@@ -313,12 +313,10 @@ def run_kea_on_folds(folds_dir):
         test_file = train_file
         run_kea(train_file, test_file, out_file)
     else:
-        print(folds_dir)
         nb_folds = len([name for name in os.listdir(folds_dir) if os.path.isfile(os.path.join(folds_dir, name))])
-        # len([name for name in os.listdir(folds_dir + "/") if os.path.isfile(name)])
-        print(nb_folds)
         # Run on multiple train/test
-        for index in range(1, nb_folds+1):
+        for index in range(1, (nb_folds/2)+1):
+            utils.print_success("Train/Test on fold " + str(index))
             train_file = folds_dir + "/train_" + str(index).zfill(2) + ".arff"
             test_file = folds_dir + "/test_" + str(index).zfill(2) + ".arff"
             out_file = folds_dir + "/results_" + str(index).zfill(2) + ".arff"
@@ -365,11 +363,11 @@ if __name__ == "__main__":
     feat_without_groundtruth = proj_dir + "/feat_without_groundtruth.arff"
     feat_with_groundtruth = proj_dir + "/" + PARSER.parse_args().output_file
     # Functions call
-    merge_arff(input_dir, feat_without_groundtruth)
-    add_groundtruth(feat_without_groundtruth,
-        PARSER.parse_args().groundtruth_file,
-        feat_with_groundtruth)
-    os.remove(feat_without_groundtruth)
+    # merge_arff(input_dir, feat_without_groundtruth)
+    # add_groundtruth(feat_without_groundtruth,
+    #     PARSER.parse_args().groundtruth_file,
+    #     feat_with_groundtruth)
+    # os.remove(feat_without_groundtruth)
     folds_dir = create_folds(feat_with_groundtruth, PARSER.parse_args().nb_folds)
     run_kea_on_folds(folds_dir)
 
