@@ -156,20 +156,26 @@ def add_groundtruth(feature_fn, groundtruth_fn, output_fn):
     output = open(output_fn, "w")
     with open(feature_fn, "r") as feat:
         line_num = 0
+        tmp_line = ""
         for line in feat:
             line_num += 1
-            if line_num > 74 and line[0] != "%":
-                # Alter feature line with correct tag
-                cur_line = line.split(",")
-                old_tag = cur_line[-1].split("_")[0]
-                if old_tag in groundtruths:
-                    new_tag = groundtruths[old_tag]
-                    output.write(",".join(cur_line[:-1]) + "," + new_tag +"\n")
-                    tags.append(new_tag)
+            if line_num > 74:
+                if line[0] != "%":
+                    # Alter feature line with correct tag
+                    cur_line = line.split(",")
+                    old_tag = cur_line[-1].split("_")[0]
+                    if old_tag in groundtruths:
+                        new_tag = groundtruths[old_tag]
+                        output.write(tmp_line + ",".join(cur_line[:-1]) + "," + new_tag +"\n")
+                        tmp_line = ""
+                        tags.append(new_tag)
+                    else:
+                        # TODO
+                        # File not in groundtruth
+                        tmp_line = ""
+                        # utils.print_warning("Error with " + old_tag)
                 else:
-                    # TODO
-                    # utils.print_warning("Error with " + old_tag)
-                    pass
+                    tmp_line += line
             elif line_num == 2:
                 output.write("@relation train_test.arff\n")
                 # output.write("@relation MARSYAS_KEA\n")
@@ -178,7 +184,7 @@ def add_groundtruth(feature_fn, groundtruth_fn, output_fn):
                 # TODO enhance
                 output.write("@attribute output {i,s}\n")
             else:
-                # Copy normal lines
+                # Write header
                 output.write(line)
     
     tags = list(set(tags))
@@ -315,12 +321,21 @@ def run_kea_on_folds(folds_dir):
     else:
         nb_folds = len([name for name in os.listdir(folds_dir) if os.path.isfile(os.path.join(folds_dir, name))])
         # Run on multiple train/test
-        for index in range(1, (nb_folds/2)+1):
+        for index in range(1, int(nb_folds/2)+1):
             utils.print_success("Train/Test on fold " + str(index))
             train_file = folds_dir + "/train_" + str(index).zfill(2) + ".arff"
             test_file = folds_dir + "/test_" + str(index).zfill(2) + ".arff"
             out_file = folds_dir + "/results_" + str(index).zfill(2) + ".arff"
             run_kea(train_file, test_file, out_file)
+
+        utils.print_warning("TODO multiprocessing")
+        # # Parallel computing on each TrainTestFolds
+        # printTitle("Parallel train & test of folds")
+        # partialRunTrainTestOnFold = partial(runTrainTestOnFold, args=args)
+        # pool = multiprocessing.Pool()
+        # pool.map(partialRunTrainTestOnFold, range(nb_folds)) #make our results with a map call
+        # pool.close() #we are not adding any more processes
+        # pool.join() #tell it to wait until all threads are done before going on
 
 if __name__ == "__main__":
     PARSER = argparse.ArgumentParser(description="Validate list of ISRCs")
@@ -358,18 +373,20 @@ if __name__ == "__main__":
     input_dir = PARSER.parse_args().input_dir
     res_dir = "analysis"
     utils.create_dir(res_dir)
+    if input_dir[-1] == "/":
+        input_dir = input_dir[:-1]
     proj_dir = res_dir + "/" + input_dir.split("/")[-1]
     utils.create_dir(proj_dir)
     feat_without_groundtruth = proj_dir + "/feat_without_groundtruth.arff"
     feat_with_groundtruth = proj_dir + "/" + PARSER.parse_args().output_file
     # Functions call
-    # merge_arff(input_dir, feat_without_groundtruth)
-    # add_groundtruth(feat_without_groundtruth,
-    #     PARSER.parse_args().groundtruth_file,
-    #     feat_with_groundtruth)
+    merge_arff(input_dir, feat_without_groundtruth)
+    add_groundtruth(feat_without_groundtruth,
+        PARSER.parse_args().groundtruth_file,
+        feat_with_groundtruth)
     # os.remove(feat_without_groundtruth)
-    folds_dir = create_folds(feat_with_groundtruth, PARSER.parse_args().nb_folds)
-    run_kea_on_folds(folds_dir)
+    # folds_dir = create_folds(feat_with_groundtruth, PARSER.parse_args().nb_folds)
+    # run_kea_on_folds(folds_dir)
 
 # 2 merge all arff files dans train/test file (generate train/test folds/set,
 #   reuse vqmm) à partir des fichiers sources d'un autre dossier, tout copier
