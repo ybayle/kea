@@ -384,9 +384,9 @@ if __name__ == "__main__":
     add_groundtruth(feat_without_groundtruth,
         PARSER.parse_args().groundtruth_file,
         feat_with_groundtruth)
-    # os.remove(feat_without_groundtruth)
-    # folds_dir = create_folds(feat_with_groundtruth, PARSER.parse_args().nb_folds)
-    # run_kea_on_folds(folds_dir)
+    os.remove(feat_without_groundtruth)
+    folds_dir = create_folds(feat_with_groundtruth, PARSER.parse_args().nb_folds, invert_train_test=True)
+    run_kea_on_folds(folds_dir)
 
 # 2 merge all arff files dans train/test file (generate train/test folds/set,
 #   reuse vqmm) à partir des fichiers sources d'un autre dossier, tout copier
